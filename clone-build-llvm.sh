@@ -11,6 +11,8 @@ set -euo pipefail
 ROCM_COMMIT_DEFAULT=61f9516af963d6ade5eed936c064b7b5433230b6
 # When --use-rocm-host-clang is set, pass these to CMake (ROCm 7.2.0 in-tree LLVM).
 ROCM_HOST_CLANG_DIR="${ROCM_HOST_CLANG_DIR:-/opt/rocm-7.2.0/llvm/bin}"
+# compiler-rt: only this triple (x86-64 Linux), not i386 multilib.
+COMPILER_RT_TARGET_TRIPLE="x86_64-unknown-linux-gnu"
 
 print_help() {
   cat <<EOF
@@ -192,6 +194,12 @@ if (( USE_ROCM_HOST_CLANG )); then
   )
 fi
 
+COMPILER_RT_HOST_FLAGS=(
+  -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
+  -DCMAKE_C_COMPILER_TARGET="${COMPILER_RT_TARGET_TRIPLE}"
+  -DCMAKE_CXX_COMPILER_TARGET="${COMPILER_RT_TARGET_TRIPLE}"
+)
+
 cmake -G Ninja \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -205,6 +213,7 @@ cmake -G Ninja \
   -DLLVM_EXTERNAL_PROJECTS="device-libs" \
   -DLLVM_EXTERNAL_DEVICE_LIBS_SOURCE_DIR="$DEVICE_LIBS_SRC_DIR" \
   "${CMAKE_HOST_COMPILER[@]}" \
+  "${COMPILER_RT_HOST_FLAGS[@]}" \
   ../llvm
 
 ninja install
